@@ -1,0 +1,89 @@
+# .github/workflows/ci-cd.yml
+[cite_start]name: CI/CD Express + Vite [cite: 139]
+on:
+  push:
+    [cite_start]branches: ["main"] [cite: 140, 141, 142]
+  pull_request:
+    [cite_start]branches: ["main"] [cite: 143, 144]
+jobs:
+  # ===========================
+  # JOB 1: INTEGRACIÓN CONTINUA
+  # ===========================
+  [cite_start]ci: [cite: 149]
+    [cite_start]runs-on: ubuntu-latest [cite: 150]
+    steps:
+      - [cite_start]name: Checkout del código [cite: 152]
+        [cite_start]uses: actions/checkout@v4 [cite: 153]
+      - [cite_start]name: Configurar Node.js [cite: 154]
+        [cite_start]uses: actions/setup-node@v4 [cite: 155]
+        with:
+          [cite_start]node-version: "20" [cite: 157]
+      # ---------- BACKEND ----------
+      - [cite_start]name: Instalar dependencias del backend [cite: 159]
+        [cite_start]run: npm install [cite: 160]
+        [cite_start]working-directory: backend [cite: 161]
+      - [cite_start]name: Ejecutar tests del backend [cite: 162]
+        [cite_start]run: npm test [cite: 163]
+        [cite_start]working-directory: backend [cite: 164]
+      - [cite_start]name: Ejecutar linter del backend [cite: 165]
+        [cite_start]run: npm run lint [cite: 166]
+        [cite_start]working-directory: backend [cite: 167]
+      # ---------- FRONTEND ----------
+      - [cite_start]name: Instalar dependencias del frontend [cite: 169]
+        [cite_start]run: npm install [cite: 170]
+        [cite_start]working-directory: frontend [cite: 171]
+      - [cite_start]name: Ejecutar tests del frontend [cite: 172]
+        [cite_start]run: npm test [cite: 173]
+        [cite_start]working-directory: frontend [cite: 174]
+      - [cite_start]name: Ejecutar linter del frontend [cite: 175]
+        [cite_start]run: npm run lint [cite: 176]
+        [cite_start]working-directory: frontend [cite: 177]
+      - [cite_start]name: Build del frontend [cite: 178]
+        [cite_start]run: npm run build [cite: 179]
+        [cite_start]working-directory: frontend [cite: 180]
+      - [cite_start]name: Subir artefacto de build del frontend [cite: 181]
+        [cite_start]uses: actions/upload-artifact@v4 [cite: 182]
+        with:
+          [cite_start]name: frontend-dist [cite: 184]
+          [cite_start]path: frontend/dist [cite: 185]
+  # ===========================
+  # JOB 2: DEPLOY FRONTEND (CD)
+  # ===========================
+  [cite_start]deploy_frontend: [cite: 189]
+    [cite_start]needs: ci [cite: 190]
+    [cite_start]runs-on: ubuntu-latest [cite: 191]
+    permissions:
+      [cite_start]contents: write [cite: 193]
+    steps:
+      - [cite_start]name: Checkout del código [cite: 195]
+        [cite_start]uses: actions/checkout@v4 [cite: 196]
+      - [cite_start]name: Descargar artefacto del frontend [cite: 197]
+        [cite_start]uses: actions/download-artifact@v4 [cite: 198]
+        with:
+          [cite_start]name: frontend-dist [cite: 200]
+          [cite_start]path: dist [cite: 201]
+      - [cite_start]name: Deploy a GitHub Pages [cite: 202]
+        [cite_start]uses: peaceiris/actions-gh-pages@v4 [cite: 203]
+        with:
+          [cite_start]github_token: ${{ secrets.GITHUB_TOKEN }} [cite: 205]
+          [cite_start]publish_dir: ./dist [cite: 206]
+  # ===========================
+  # JOB 3: IMAGEN DOCKER BACKEND
+  # ===========================
+  [cite_start]build_and_push_backend: [cite: 210]
+    [cite_start]needs: ci [cite: 211]
+    [cite_start]runs-on: ubuntu-latest [cite: 212]
+    steps:
+      - [cite_start]name: Checkout del código [cite: 214]
+        [cite_start]uses: actions/checkout@v4 [cite: 215]
+      - [cite_start]name: Login en Docker Hub [cite: 216]
+        [cite_start]uses: docker/login-action@v3 [cite: 217]
+        with:
+          [cite_start]username: ${{ secrets.DOCKERHUB_USERNAME }} [cite: 219]
+          [cite_start]password: ${{ secrets.DOCKERHUB_TOKEN }} [cite: 220]
+      - [cite_start]name: Construir imagen Docker del backend [cite: 221]
+        run: |
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/backend-express-ci-cd:latest ./backend [cite: 223]
+      - [cite_start]name: Enviar imagen a Docker Hub [cite: 224]
+        run: |
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/backend-express-ci-cd:latest [cite: 226]
